@@ -1,24 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 
-function serverDb() {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-  return createClient<Database>(process.env["SUPABASE_URL"]!, key, {
-    auth: { persistSession: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) {
-          h.delete("Authorization");
-        }
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
-  });
+/**
+ * The demand_requests table is not reachable from the browser (RLS with no
+ * public policies). Every read/write happens here, server-side, with the
+ * privileged client loaded lazily inside handlers so it never ships to the client.
+ */
+async function serverDb() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
 }
 
 /** Speech -> text via Lovable AI (Gemini transcription). */
@@ -80,30 +71,47 @@ async function extractProduct(transcript: string, apiKey: string) {
   };
 }
 
+const STATUSES = ["new", "ordering", "stocked", "ignored"] as const;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Full pipeline: audio (or typed text) -> transcript -> product -> saved row. */
 export const submitDemand = createServerFn({ method: "POST" })
-  .inputValidator((input: { audioBase64?: string; mimeType?: string; text?: string }) => input)
+  .inputValidator((input: { audioBase64?: string; mimeType?: string; text?: string }) => {
+    // Validate before any AI call or database write.
+    const text = typeof input.text === "string" ? input.text.slice(0, 500) : undefined;
+    const audioBase64 = typeof input.audioBase64 === "string" ? input.audioBase64 : undefined;
+    if (audioBase64 && audioBase64.length > 8_000_000) {
+      throw new Error("That recording is too long. Please keep it under a few seconds.");
+    }
+    const mimeType =
+      typeof input.mimeType === "string" && input.mimeType.startsWith("audio/")
+        ? input.mimeType
+        : "audio/wav";
+    return { audioBase64, mimeType, text };
+  })
   .handler(async ({ data }) => {
     const apiKey = process.env["LOVABLE_API_KEY"]!;
 
     let transcript = (data.text ?? "").trim();
     if (!transcript) {
       if (!data.audioBase64) throw new Error("Nothing was recorded. Please try again.");
-      transcript = await transcribe(data.audioBase64, data.mimeType || "audio/wav", apiKey);
+      transcript = await transcribe(data.audioBase64, data.mimeType, apiKey);
     }
     if (!transcript) throw new Error("We couldn't hear anything. Please speak a little louder.");
+    transcript = transcript.slice(0, 500);
 
     const product = await extractProduct(transcript, apiKey);
     if (product.product_name.toLowerCase() === "unclear") {
       return { ok: false as const, transcript, message: "We heard you, but couldn't identify a product." };
     }
 
-    const { data: row, error } = await serverDb()
+    const db = await serverDb();
+    const { data: row, error } = await db
       .from("demand_requests")
       .insert({
         transcript,
-        product_name: product.product_name,
-        category: product.category,
+        product_name: product.product_name.slice(0, 80),
+        category: product.category.slice(0, 40),
         confidence: product.confidence,
       })
       .select()
@@ -111,4 +119,36 @@ export const submitDemand = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
     return { ok: true as const, transcript, request: row };
+  });
+
+/** Owner dashboard read. Runs server-side; the browser has no table access. */
+export const listDemands = createServerFn({ method: "GET" }).handler(async () => {
+  const db = await serverDb();
+  const { data, error } = await db
+    .from("demand_requests")
+    .select("id, transcript, product_name, category, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
+/** Owner dashboard write: only the status column, only to known values. */
+export const setDemandStatus = createServerFn({ method: "POST" })
+  .inputValidator((input: { ids: string[]; status: string }) => {
+    const ids = (Array.isArray(input.ids) ? input.ids : []).filter((id) => UUID_RE.test(id)).slice(0, 200);
+    if (ids.length === 0) throw new Error("No valid requests selected.");
+    if (!STATUSES.includes(input.status as (typeof STATUSES)[number])) {
+      throw new Error("Unknown status.");
+    }
+    return { ids, status: input.status };
+  })
+  .handler(async ({ data }) => {
+    const db = await serverDb();
+    const { error } = await db
+      .from("demand_requests")
+      .update({ status: data.status })
+      .in("id", data.ids);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });

@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Mic, PackageSearch, TrendingUp, Users } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { listDemands, setDemandStatus } from "@/lib/demand.functions";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/dashboard")({
@@ -50,36 +50,18 @@ const STATUS_STYLE: Record<string, string> = {
   ignored: "bg-muted text-muted-foreground",
 };
 
-async function fetchRequests(): Promise<Row[]> {
-  const { data, error } = await supabase
-    .from("demand_requests")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(500);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Row[];
-}
-
 function Dashboard() {
   const qc = useQueryClient();
+  const fetchRequests = useServerFn(listDemands);
+  const updateStatus = useServerFn(setDemandStatus);
+
   const { data: rows = [], isLoading, error } = useQuery({
     queryKey: ["demand_requests"],
-    queryFn: fetchRequests,
+    queryFn: async () => (await fetchRequests()) as Row[],
+    // The table is server-only now, so we poll instead of a browser realtime
+    // subscription. Two seconds still feels instant at the counter.
+    refetchInterval: 2000,
   });
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("demand_requests_live")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "demand_requests" },
-        () => void qc.invalidateQueries({ queryKey: ["demand_requests"] }),
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [qc]);
 
   // Group requests by product so the owner sees demand, not raw events.
   const grouped = Object.values(
@@ -108,7 +90,7 @@ function Dashboard() {
   ).sort((a, b) => b.count - a.count || +new Date(b.latest) - +new Date(a.latest));
 
   async function setStatus(ids: string[], status: string) {
-    await supabase.from("demand_requests").update({ status }).in("id", ids);
+    await updateStatus({ data: { ids, status } });
     void qc.invalidateQueries({ queryKey: ["demand_requests"] });
   }
 
