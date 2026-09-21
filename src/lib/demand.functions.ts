@@ -1,24 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 
-function serverDb() {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-  return createClient<Database>(process.env["SUPABASE_URL"]!, key, {
-    auth: { persistSession: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) {
-          h.delete("Authorization");
-        }
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
-  });
+/**
+ * The demand_requests table is not reachable from the browser (RLS with no
+ * public policies). Every read/write happens here, server-side, with the
+ * privileged client loaded lazily inside handlers so it never ships to the client.
+ */
+async function serverDb() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
 }
 
 /** Speech -> text via Lovable AI (Gemini transcription). */
