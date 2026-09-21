@@ -90,7 +90,7 @@ function Dashboard() {
   ).sort((a, b) => b.count - a.count || +new Date(b.latest) - +new Date(a.latest));
 
   async function setStatus(ids: string[], status: string) {
-    await supabase.from("demand_requests").update({ status }).in("id", ids);
+    await updateStatus({ data: { ids, status } });
     void qc.invalidateQueries({ queryKey: ["demand_requests"] });
   }
 
