@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      demand_requests: {
+        Row: {
+          category: string | null
+          confidence: number | null
+          created_at: string
+          id: string
+          product_name: string
+          status: string
+          transcript: string
+        }
+        Insert: {
+          category?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          product_name: string
+          status?: string
+          transcript: string
+        }
+        Update: {
+          category?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          product_name?: string
+          status?: string
+          transcript?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
