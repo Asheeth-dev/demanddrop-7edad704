@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Mic, PackageSearch, TrendingUp, Users } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { listDemands, setDemandStatus } from "@/lib/demand.functions";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/dashboard")({
