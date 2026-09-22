@@ -99,25 +99,33 @@ function Dashboard() {
   ).length;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-5 py-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto w-full max-w-6xl px-5 py-6 sm:px-8 sm:py-8">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
         <div>
-          <p className="font-display text-lg font-semibold tracking-tight">DemandDrop</p>
-          <p className="text-xs text-muted-foreground">Owner dashboard · Sharma General Store</p>
+          <p className="font-display text-lg font-bold">DemandDrop</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Sharma General Store · Owner view</p>
         </div>
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:text-primary"
         >
           <Mic className="size-3.5" />
           Counter screen
         </Link>
       </header>
 
-      <h1 className="mt-8 text-3xl font-semibold">What people asked for</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Every item a customer wanted but you didn't have — updated live.
-      </p>
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold sm:text-4xl">Demand you can act on.</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ranked customer requests, refreshed every two seconds.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary uppercase">
+          <span className="size-2 rounded-full bg-live animate-pulse" />
+          Live demand
+        </div>
+      </div>
 
       <div className="mt-6 grid grid-cols-3 gap-3">
         <Stat icon={<Users className="size-4" />} label="Total requests" value={rows.length} />
@@ -125,7 +133,7 @@ function Dashboard() {
         <Stat icon={<TrendingUp className="size-4" />} label="Today" value={todayCount} />
       </div>
 
-      <div className="surface mt-6 overflow-hidden rounded-2xl">
+      <div className="surface mt-6 overflow-hidden rounded-xl">
         {isLoading ? (
           <div className="space-y-3 p-6">
             {[0, 1, 2].map((i) => (
@@ -150,8 +158,8 @@ function Dashboard() {
         ) : (
           <ul className="divide-y divide-border">
             {grouped.map((g) => (
-              <li key={g.product} className="flex flex-wrap items-center gap-3 p-4 sm:px-6">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary font-display text-lg font-semibold">
+              <li key={g.product} className="flex flex-wrap items-center gap-3 p-4 transition-colors hover:bg-secondary/40 sm:px-6">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-secondary font-mono text-lg font-bold text-primary">
                   {g.count}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -186,12 +194,12 @@ function Dashboard() {
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="surface rounded-2xl p-4">
+    <div className="surface rounded-xl p-4">
       <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
         <span className="text-xs">{label}</span>
       </div>
-      <p className="font-display mt-1 text-2xl font-semibold">{value}</p>
+      <p className="mt-2 font-mono text-2xl font-bold text-foreground">{value}</p>
     </div>
   );
 }
