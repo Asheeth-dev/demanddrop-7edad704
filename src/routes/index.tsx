@@ -91,37 +91,41 @@ function CustomerScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 py-8">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-5 py-6 sm:px-8 sm:py-8">
+      <header className="flex items-center justify-between border-b border-border pb-5">
         <div>
-          <p className="font-display text-lg font-semibold tracking-tight">DemandDrop</p>
-          <p className="text-xs text-muted-foreground">Sharma General Store · Counter</p>
+          <p className="font-display text-lg font-bold">DemandDrop</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Sharma General Store · Customer counter</p>
         </div>
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:text-primary"
         >
           <LayoutDashboard className="size-3.5" />
           Owner
         </Link>
       </header>
 
-      <div className="mt-10 text-center">
-        <h1 className="text-3xl leading-tight font-semibold">Couldn't find something?</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Tap the mic and just say it. No typing, no scanning.
+      <div className="mx-auto mt-10 max-w-xl text-center sm:mt-14">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary uppercase">
+          <span className="size-2 rounded-full bg-live animate-pulse" />
+          Voice request ready
+        </div>
+        <h1 className="text-3xl leading-tight font-bold sm:text-5xl">Tell the shop what’s missing.</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground sm:text-base">
+          Say the product you couldn’t find. AI turns your words into a clear stock request for the owner.
         </p>
       </div>
 
-      <div className="mt-10 flex flex-col items-center">
+      <div className="mt-9 flex flex-col items-center sm:mt-12">
         <button
           type="button"
           onClick={handleMic}
           disabled={busy}
           aria-label={recording ? "Stop recording" : "Start recording"}
           style={recording ? { transform: `scale(${1 + Math.min(level, 0.5) * 0.4})` } : undefined}
-          className={`flex size-36 items-center justify-center rounded-full text-primary-foreground transition-all duration-150 disabled:opacity-60 ${
-            recording ? "mic-live bg-destructive" : "bg-primary hover:brightness-110 active:scale-95"
+          className={`flex size-40 items-center justify-center rounded-full border-8 border-card text-primary-foreground shadow-2xl transition-all duration-150 focus-visible:outline-none disabled:opacity-60 sm:size-48 ${
+            recording ? "mic-live bg-destructive" : "bg-primary hover:scale-[1.03] active:scale-95"
           }`}
         >
           {busy ? (
@@ -132,7 +136,7 @@ function CustomerScreen() {
             <Mic className="size-14" />
           )}
         </button>
-        <p className="mt-5 h-5 text-sm font-medium text-muted-foreground">
+        <p className="mt-5 min-h-6 text-sm font-semibold text-foreground">
           {busy
             ? "Understanding what you said…"
             : recording
@@ -141,7 +145,7 @@ function CustomerScreen() {
         </p>
       </div>
 
-      <div aria-live="polite" className="mt-8">
+      <div aria-live="polite" className="mx-auto mt-8 w-full max-w-lg">
         {result?.kind === "success" && (
           <div className="rise-in surface rounded-2xl p-5 text-center">
             <CheckCircle2 className="mx-auto size-8 text-primary" />
@@ -175,7 +179,7 @@ function CustomerScreen() {
         )}
       </div>
 
-      <div className="mt-auto pt-10">
+      <div className="mx-auto mt-auto w-full max-w-lg pt-10">
         {typing ? (
           <form
             onSubmit={(e) => {
@@ -184,12 +188,12 @@ function CustomerScreen() {
               void process({ text: text.trim() });
               setText("");
             }}
-            className="flex gap-2"
+            className="flex gap-2 rounded-xl border border-border bg-card p-2"
           >
             <Input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="e.g. I was looking for Oatly"
+               placeholder="Try: I was looking for blue Gatorade"
               className="h-11"
             />
             <Button type="submit" disabled={busy || !text.trim()} className="h-11">
@@ -200,7 +204,7 @@ function CustomerScreen() {
           <button
             type="button"
             onClick={() => setTyping(true)}
-            className="mx-auto flex items-center gap-1.5 text-xs text-muted-foreground underline-offset-4 hover:underline"
+            className="mx-auto flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Keyboard className="size-3.5" />
             Can't speak right now? Type it instead
